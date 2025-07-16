@@ -1,0 +1,50 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © AnhNguyenfx
+
+//@version=6
+indicator("Pivot H/L", overlay=true)
+
+// === Pivot High/Low Settings ===
+// Number of bars to the left and right used to identify pivot highs and lows
+var pivotSetting = "Pivot H/L Setting"
+leftBars = input.int(5, title="Left Bars", group = pivotSetting)     // Number of candles to the left of a pivot
+rightBars = input.int(5, title="Right Bars", group = pivotSetting)   // Number of candles to the right of a pivot
+
+// === Shape Style Settings ===
+// User-defined shape style for marking Pivot Highs and Pivot Lows
+shapeStyleHigh = input.string("Circle", title="Shape for Pivot High", options=["Circle", "Triangle Up", "Triangle Down", "Square", "Diamond"], group = pivotSetting)
+shapeStyleLow = input.string("Circle", title="Shape for Pivot Low", options=["Circle", "Triangle Up", "Triangle Down", "Square", "Diamond"], group = pivotSetting)
+
+// === Location Settings ===
+// Choose where to place the shapes (above or below the bars)
+locationHigh = input.string("Above Bar", title="Location for Pivot High", options=["Above Bar", "Below Bar"], group = pivotSetting)
+locationLow = input.string("Below Bar", title="Location for Pivot Low", options=["Above Bar", "Below Bar"], group = pivotSetting)
+
+// === Color Settings ===
+// Define custom colors for Pivot High and Pivot Low markers
+colorHigh = input.color(color.blue, title="Color for Pivot High", group = pivotSetting)
+colorLow = input.color(color.red, title="Color for Pivot Low", group = pivotSetting)
+
+// === Offset Settings ===
+// Offset for marker positioning, can be adjusted to avoid overlapping with price bars
+offsetHigh = input.int(-5, title="Offset for Pivot High", minval=-50, maxval=50, group = pivotSetting)
+offsetLow = input.int(-5, title="Offset for Pivot Low", minval=-50, maxval=50, group = pivotSetting)
+
+// === Calculate Pivot High/Low ===
+// Use built-in functions to detect pivot high and low points
+ph = ta.pivothigh(leftBars, rightBars) 
+pl = ta.pivotlow(leftBars, rightBars) 
+
+// === Function to get shape type based on user selection ===
+getShape(shapeStr) =>
+    switch shapeStr
+        "Circle"       => shape.circle
+        "Triangle Up"  => shape.triangleup
+        "Triangle Down"=> shape.triangledown
+        "Square"       => shape.square
+        "Diamond"      => shape.diamond
+
+// === Plotting ===
+// Draw shapes at pivot highs using selected settings
+plotshape(ph,style=getShape(shapeStyleHigh),location=locationHigh == "Above Bar" ? location.abovebar : location.belowbar,color=colorHigh,offset=offsetHigh,size = size.tiny,title="Pivot High")
+plotshape(pl,style=getShape(shapeStyleLow),location=locationLow == "Above Bar" ? location.abovebar : location.belowbar,color=colorLow,offset=offsetLow,size = size.tiny,title="Pivot Low")
