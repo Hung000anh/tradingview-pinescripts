@@ -1,0 +1,33 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © AnhNguyenfx
+
+//@version=6
+indicator("Adaptive Multiple MAs", overlay = true)
+
+// === MA Type Selection ===
+// User selects the type of moving average (MA) to use
+ma_type = input.string("EMA", title="Loại MA", options=["SMA", "EMA", "WMA", "VWMA"], group="MA Settings")
+
+// === MA Length Inputs ===
+// User inputs length for each MA line; default values provided but can be changed
+ma1_length = input.int(30, title="MA1 Length", minval=1, group="MA Lengths")
+ma2_length = input.int(60, title="MA2 Length", minval=1, group="MA Lengths")
+ma3_length = input.int(90, title="MA3 Length", minval=1, group="MA Lengths")
+
+// === MA Calculation Function ===
+// Calculates the moving average based on selected type and length
+// Returns 'na' if length <= 0 or unknown MA type
+maFunc(src, len, type) =>
+    len > 0 ? (type == "SMA"  ? ta.sma(src, len) :type == "EMA"  ? ta.ema(src, len) :type == "WMA"  ? ta.wma(src, len) :type == "VWMA" ? ta.vwma(src, len) :na) : na
+
+// === Calculate MAs ===
+// Compute 3 MAs using user-defined lengths and type
+ma1 = maFunc(close, ma1_length, ma_type)
+ma2 = maFunc(close, ma2_length, ma_type)
+ma3 = maFunc(close, ma3_length, ma_type)
+
+// === Plot MAs ===
+// Draw the moving averages on the chart with different colors and line widths
+plot(ma1, title="MA 1", color=color.blue, linewidth=2)
+plot(ma2, title="MA 2", color=color.orange, linewidth=2)
+plot(ma3, title="MA 3", color=color.green, linewidth=2)
