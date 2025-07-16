@@ -24,8 +24,8 @@ Users can adjust left/right bar sensitivity, shape type, location, color, and of
 
 ## 📸 Preview
 
-![Pivot Marker Example](./image/preview.png)
-![Pivot Setting Example](./image/setting.png)
+![Pivot Marker Example](./images/preview.png)
+![Pivot Setting Example](./images/setting.png)
 
 ## 📥 How to Use
 
