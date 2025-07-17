@@ -1,0 +1,88 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © AnhNguyenfx
+
+//@version=6
+indicator("session-killzones-timeline", overlay = true)
+
+// --- Line Customization Inputs ---
+var group_lines = "Vertical Line Customization"
+lineWidth = input.int(1, title="Line Width", group=group_lines)
+lineStyle = input.string("Solid", title="Line Style", options=["Solid", "Dashed", "Dotted"], group=group_lines)
+
+// --- Vertical Line Colors ---
+var group_vertical_lines = "Vertical Line Colors"
+yearlyColor = input.color(color.silver, title="Yearly Line Color", group = group_vertical_lines)
+quarterlyColor = input.color(color.silver, title="Quarterly Line Color", group=group_vertical_lines)
+monthlyColor = input.color(color.silver, title="Monthly Line Color", group=group_vertical_lines)
+weeklyColor = input.color(color.silver, title="Weekly Line Color", group=group_vertical_lines)
+dailyColor = input.color(color.silver, title="Daily Line Color", group=group_vertical_lines)
+
+// --- Background Color Inputs ---
+var group_killzones = "Killzone Background Colors"
+boxTransparency = input.int(90, title="Box Transparency", group=group_killzones)
+asianColor = input.color(color.aqua, title="Asian Background Color", group=group_killzones)
+londonColor = input.color(color.green, title="London Background Color", group=group_killzones)
+newyorkColor = input.color(color.blue, title="New York Background Color", group=group_killzones)
+londonClsColor = input.color(color.red, title="London Close Background Color", group=group_killzones)
+cbdrColor = input.color(color.orange, title="CBDR Background Color", group=group_killzones)
+
+// --- Session Inputs for Killzones ---
+var group_session = "Killzones Time"
+asianSession = input.session("2000-0000", title="Asian Killzone Time (UTC)", group = group_session)
+londonSession = input.session("0100-0500", title="London Killzone Time (UTC)", group = group_session)
+newyorkSession = input.session("0700-1000", title="New York Killzone Time (UTC)", group = group_session)
+londonCloseSession = input.session("1000-1100", title="London Close Time (UTC)", group = group_session)
+cbdrSession = input.session("1400-2000", title="CBDR Time (UTC)", group = group_session)
+
+// --- Killzone Colors ---
+TD1 = color.new(asianColor, boxTransparency)   // Asian Killzone: 2000-0000
+TD2 = color.new(londonColor, boxTransparency)  // London Killzone: 0100-0500
+TD3 = color.new(newyorkColor, boxTransparency) // NY Killzone: 0700-1000
+TD4 = color.new(londonClsColor, boxTransparency) // London Close: 1000-1100
+TD5 = color.new(cbdrColor, boxTransparency)    // CBDR: 1400-2000
+
+// ================== DETECT TIMEFRAMES ==================
+isMonthly = timeframe.ismonthly
+isWeekly = timeframe.isweekly
+isDaily = timeframe.isdaily
+isH4 = (timeframe.isintraday and timeframe.period == "240")
+isH1 = (timeframe.isintraday and timeframe.period == "60")
+isM15 = (timeframe.isintraday and timeframe.period == "15")
+
+is_new(resolution) =>
+    t = time(resolution)
+    not na(t) and (na(t[1]) or t > t[1])
+
+is_new_year() => is_new("12M")
+is_new_quarter() => is_new("3M")
+is_new_month() => is_new("M")
+is_new_week() => is_new("W")
+is_new_day() => is_new("D")
+
+// --- Yearly Line ---
+if (isMonthly and is_new_year())
+    line.new(x1=bar_index, y1=low - 10, x2=bar_index, y2=high + 10, extend=extend.both, color=yearlyColor, width=lineWidth, style=(lineStyle == "Solid" ? line.style_solid : lineStyle == "Dashed" ? line.style_dashed : line.style_dotted))
+
+// --- Quarterly Line ---
+if (isWeekly and is_new_quarter())
+    line.new(x1=bar_index, y1=low - 10, x2=bar_index, y2=high + 10, extend=extend.both, color=quarterlyColor, width=lineWidth, style=(lineStyle == "Solid" ? line.style_solid : lineStyle == "Dashed" ? line.style_dashed : line.style_dotted))
+
+// --- Monthly Line ---
+if (isDaily and is_new_month())
+    line.new(x1=bar_index, y1=low - 10, x2=bar_index, y2=high + 10, extend=extend.both, color=monthlyColor, width=lineWidth, style=(lineStyle == "Solid" ? line.style_solid : lineStyle == "Dashed" ? line.style_dashed :  line.style_dotted))
+
+// --- Weekly Line ---
+if (isH4 and is_new_week())
+    line.new(x1=bar_index, y1=low - 10, x2=bar_index, y2=high + 10, extend=extend.both, color=weeklyColor, width=lineWidth, style=(lineStyle == "Solid" ? line.style_solid : lineStyle == "Dashed" ? line.style_dashed :  line.style_dotted) )
+
+// --- Daily Line ---
+if (isH1 and is_new_day()) 
+    line.new(x1=bar_index, y1=low - 10, x2=bar_index, y2=high + 10, extend=extend.both, color=dailyColor, width=lineWidth, style=(lineStyle == "Solid" ? line.style_solid : lineStyle == "Dashed" ? line.style_dashed : line.style_dotted))
+
+// --- Killzone Background Coloring ---
+bgcolor(isM15 and not na(time("15", asianSession, "America/New_York")) ? TD1 : na, title="Killzone Asian")
+bgcolor(isM15 and not na(time("15", londonSession, "America/New_York")) ? TD2 : na, title="Killzone London")
+bgcolor(isM15 and not na(time("15", newyorkSession, "America/New_York")) ? TD3 : na, title="Killzone New York")
+bgcolor(isM15 and not na(time("15", londonCloseSession, "America/New_York")) ? TD4 : na, title="Killzone London Close")
+bgcolor(isM15 and not na(time("15", cbdrSession, "America/New_York")) ? TD5 : na, title="Killzone CBDR")
+
