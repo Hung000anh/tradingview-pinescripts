@@ -1,0 +1,164 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © AnhNguyenfx
+
+//@version=6
+indicator("Economic Indicator Table", overlay = true)
+
+var groupEcoPosition = "Table  Economic setting"
+tableEcoX = input.string("Right", title="Horizontal Position", options=["Left", "Center", "Right"], group = groupEcoPosition)
+tableEcoY = input.string("Bottom", title="Vertical Position", options=["Top", "Middle", "Bottom"], group = groupEcoPosition)
+// Kích thước chữ cho bảng
+textEcoSize = input.string("Normal", title="Text Size", options=["Tiny" ,"Small", "Normal", "Large", "Huge"], group = groupEcoPosition)
+
+// Table Color Inputs
+bgEcoColorHeader = input.color(color.blue, title="Header Background Color", group = groupEcoPosition) // Background color of the header
+textEcoColorHeader = input.color(color.white, title="Header Text Color", group = groupEcoPosition) // Text color for the header
+bgEcoColorRow = input.color(color.black, title="Row Background Color", group = groupEcoPosition) // Background color of each row
+textEcoColorRow = input.color(color.white, title="Row Text Color", group = groupEcoPosition) // Text color for the rows
+
+posEcoString = str.lower(tableEcoY) + "_" + str.lower(tableEcoX)
+var tableEcoPos = switch posEcoString
+    "top_left"       => position.top_left
+    "top_center"     => position.top_center
+    "top_right"      => position.top_right
+    "middle_left"    => position.middle_left
+    "middle_center"  => position.middle_center
+    "middle_right"   => position.middle_right
+    "bottom_left"    => position.bottom_left
+    "bottom_center"  => position.bottom_center
+    "bottom_right"   => position.bottom_right
+
+// Xác định quốc gia hiện tại dựa trên cặp tiền tệ
+pair = syminfo.ticker
+current_country = (str.contains(pair, "EURUSD") or str.contains(pair, "6E1!")) ? "EU" : 
+                  (str.contains(pair, "GBPUSD") or str.contains(pair, "6B1!")) ? "GB" : 
+                  (str.contains(pair, "AUDUSD") or str.contains(pair, "6A1!")) ? "AU" : 
+                  (str.contains(pair, "NZDUSD") or str.contains(pair, "6N1!")) ? "NZ" : 
+                  (str.contains(pair, "USDJPY") or str.contains(pair, "6J1!")) ? "JP" : 
+                  (str.contains(pair, "USDCAD") or str.contains(pair, "6C1!")) ? "CA" : 
+                  (str.contains(pair, "USDCHF") or str.contains(pair, "6S1!")) ? "CH" : "US"
+
+// Lấy dữ liệu kinh tế của Mỹ
+us_gdp_growth = request.economic("US", "GDP")
+us_interest_rate = request.economic("US", "INTR")
+us_inflation_rate = request.economic("US", "IRYY")
+us_consumer_price_index = request.economic("US", "CPI")
+us_producer_price_index = request.economic("US", "PPI")
+us_unemployment_rate = request.economic("US", "UR")
+us_trade_balance = request.economic("US", "BOT")
+us_gov_debt = request.economic("US", "GDG")
+us_consumer_confidence_index = request.economic("US", "CCI")
+us_retail_sales = request.economic("US", "RSMM")
+us_money_supply = request.economic("US", "M2")
+
+// Lấy dữ liệu kinh tế của quốc gia hiện tại (trừ khi là DX1!)
+currency_code = current_country == "EU" ? "EUR" : current_country == "GB" ? "GBP" : current_country == "AU" ? "AUD" : current_country == "NZ" ? "NZD" : current_country == "JP" ? "JPY" : current_country == "CA" ? "CAD" : current_country == "CH" ? "CHF" : "USD"
+
+is_usd_quote = currency_code == "EUR" or currency_code == "GBP" or currency_code == "AUD" or currency_code == "NZD"
+fx_pair = is_usd_quote ? currency_code + "USD" : "USD" + currency_code
+exchange_rate = request.security(fx_pair, timeframe.period, close)
+
+convert_to_usd(val) =>
+    is_usd_quote ? val * exchange_rate : val / exchange_rate
+
+current_gdp_growth = pair == "DX1!" ? na : request.economic(current_country, "GDP")
+current_interest_rate = pair == "DX1!" ? na : request.economic(current_country, "INTR")
+current_inflation_rate = pair == "DX1!" ? na : request.economic(current_country, "IRYY")
+current_consumer_price_index = pair == "DX1!" ? na : request.economic(current_country, "CPI")
+current_producer_price_index = pair == "DX1!" ? na : request.economic(current_country, "PPI")
+current_unemployment_rate = pair == "DX1!" ? na : request.economic(current_country, "UR")
+current_trade_balance = pair == "DX1!" ? na : convert_to_usd(request.economic(current_country, "BOT"))
+current_gov_debt = pair == "DX1!" ? na : request.economic(current_country, "GDG")
+current_consumer_confidence_index = pair == "DX1!" ? na : request.economic(current_country, "CCI")
+current_retail_sales = pair == "DX1!" ? na : request.economic(current_country, "RSMM")
+current_money_supply = pair == "DX1!" ? na : convert_to_usd(request.economic(current_country, current_country == "AU" ? "M3" : "M2"))
+
+// Xác định số cột của bảng (2 cột nếu là DX1!, 3 cột nếu không)
+column_count = pair == "DX1!" ? 2 : 4
+
+// Tạo bảng
+table economicTable = table.new(position = tableEcoPos, columns = column_count, rows = 12, border_width = 1)
+
+// Thêm tiêu đề
+table.cell(economicTable, 0, 0, "Indicator", text_color= textEcoColorHeader, bgcolor=bgEcoColorHeader, text_size=textEcoSize == "Tiny" ? size.tiny : (textEcoSize == "Small" ? size.small : (textEcoSize == "Normal" ? size.normal : (textEcoSize == "Large" ? size.large : (textEcoSize == "Huge" ? size.huge : "")))))
+table.cell(economicTable, 1, 0, "US", text_color=textEcoColorHeader, bgcolor=bgEcoColorHeader, text_size=textEcoSize == "Tiny" ? size.tiny : (textEcoSize == "Small" ? size.small : (textEcoSize == "Normal" ? size.normal : (textEcoSize == "Large" ? size.large : (textEcoSize == "Huge" ? size.huge : "")))))
+if pair != "DX1!"
+    table.cell(economicTable, 2, 0, current_country, text_color=textEcoColorHeader, bgcolor=bgEcoColorHeader, text_size=textEcoSize == "Tiny" ? size.tiny : (textEcoSize == "Small" ? size.small : (textEcoSize == "Normal" ? size.normal : (textEcoSize == "Large" ? size.large : (textEcoSize == "Huge" ? size.huge : "")))))
+    table.cell(economicTable, 3, 0, "Difference", text_color=textEcoColorHeader, bgcolor=bgEcoColorHeader, text_size=textEcoSize == "Tiny" ? size.tiny : (textEcoSize == "Small" ? size.small : (textEcoSize == "Normal" ? size.normal : (textEcoSize == "Large" ? size.large : (textEcoSize == "Huge" ? size.huge : "")))))
+
+// Thêm dữ liệu vào bảng
+indicators = array.new_string(11)
+values_us = array.new_float(11)
+values_current = array.new_float(11)
+
+array.set(indicators, 0, "GDP Growth")
+array.set(values_us, 0, us_gdp_growth)
+array.set(values_current, 0, current_gdp_growth)
+
+array.set(indicators, 1, "Interest Rate")
+array.set(values_us, 1, us_interest_rate)
+array.set(values_current, 1, current_interest_rate)
+
+array.set(indicators, 2, "Inflation Rate")
+array.set(values_us, 2, us_inflation_rate)
+array.set(values_current, 2, current_inflation_rate)
+
+array.set(indicators, 3, "CPI")
+array.set(values_us, 3, us_consumer_price_index)
+array.set(values_current, 3, current_consumer_price_index)
+
+array.set(indicators, 4, "PPI")
+array.set(values_us, 4, us_producer_price_index)
+array.set(values_current, 4, current_producer_price_index)
+
+array.set(indicators, 5, "Unemployment Rate")
+array.set(values_us, 5, us_unemployment_rate)
+array.set(values_current, 5, current_unemployment_rate)
+
+array.set(indicators, 6, "Trade Balance")
+array.set(values_us, 6, us_trade_balance)
+array.set(values_current, 6, current_trade_balance)
+
+array.set(indicators, 7, "Gov Debt")
+array.set(values_us, 7, us_gov_debt)
+array.set(values_current, 7, current_gov_debt)
+
+array.set(indicators, 8, "Consumer Confidence")
+array.set(values_us, 8, us_consumer_confidence_index)
+array.set(values_current, 8, current_consumer_confidence_index)
+
+array.set(indicators, 9, "Retail Sales")
+array.set(values_us, 9, us_retail_sales)
+array.set(values_current, 9, current_retail_sales)
+
+array.set(indicators, 10, "Money Supply")
+array.set(values_us, 10, us_money_supply)
+array.set(values_current, 10, current_money_supply)
+
+formatNumber(val) =>
+    absVal = math.abs(val)
+    str = absVal >= 1e12 ? str.tostring(val / 1e12, "#.##") + "T" :
+          absVal >= 1e9  ? str.tostring(val / 1e9, "#.##") + "B" :
+          absVal >= 1e6  ? str.tostring(val / 1e6, "#.##") + "M" :
+          absVal >= 1e3  ? str.tostring(val / 1e3, "#.##") + "K" :
+                           str.tostring(val, "#.##")
+    str
+
+// Hiển thị dữ liệu trong bảng
+// for i = 0 to 10
+//     table.cell(economicTable, 0, i + 1, array.get(indicators, i), bgcolor=bgEcoColorRow, text_color=textEcoColorRow, text_size=textEcoSize == "Tiny" ? size.tiny : (textEcoSize == "Small" ? size.small : (textEcoSize == "Normal" ? size.normal : (textEcoSize == "Large" ? size.large : (textEcoSize == "Huge" ? size.huge : "")))))
+//     table.cell(economicTable, 1, i + 1, str.tostring(array.get(values_us, i)), bgcolor=bgEcoColorRow, text_color=textEcoColorRow, text_size=textEcoSize == "Tiny" ? size.tiny : (textEcoSize == "Small" ? size.small : (textEcoSize == "Normal" ? size.normal : (textEcoSize == "Large" ? size.large : (textEcoSize == "Huge" ? size.huge : "")))))
+//     if pair != "DX1!"
+//         table.cell(economicTable, 2, i + 1, str.tostring(array.get(values_current, i)), bgcolor=bgEcoColorRow, text_color=textEcoColorRow, text_size=textEcoSize == "Tiny" ? size.tiny : (textEcoSize == "Small" ? size.small : (textEcoSize == "Normal" ? size.normal : (textEcoSize == "Large" ? size.large : (textEcoSize == "Huge" ? size.huge : "")))))
+for i = 0 to 10
+    indicator = array.get(indicators, i)
+    usVal = array.get(values_us, i)
+    currentVal = array.get(values_current, i)
+    diff =  usVal - currentVal
+
+    table.cell(economicTable, 0, i + 1, indicator, bgcolor=bgEcoColorRow, text_color=textEcoColorRow, text_size=textEcoSize == "Tiny" ? size.tiny : textEcoSize == "Small" ? size.small : textEcoSize == "Normal" ? size.normal : textEcoSize == "Large" ? size.large : textEcoSize == "Huge" ? size.huge : na)
+    table.cell(economicTable, 1, i + 1, formatNumber(usVal), bgcolor=bgEcoColorRow, text_color=textEcoColorRow, text_size=textEcoSize == "Tiny" ? size.tiny : textEcoSize == "Small" ? size.small : textEcoSize == "Normal" ? size.normal : textEcoSize == "Large" ? size.large : textEcoSize == "Huge" ? size.huge : na)
+
+    if pair != "DX1!"
+        table.cell(economicTable, 2, i + 1, formatNumber(currentVal), bgcolor=bgEcoColorRow, text_color=textEcoColorRow, text_size=textEcoSize == "Tiny" ? size.tiny : textEcoSize == "Small" ? size.small : textEcoSize == "Normal" ? size.normal : textEcoSize == "Large" ? size.large : textEcoSize == "Huge" ? size.huge : na)
+        table.cell(economicTable, 3, i + 1, formatNumber(diff), bgcolor=bgEcoColorRow, text_color=textEcoColorRow, text_size=textEcoSize == "Tiny" ? size.tiny : textEcoSize == "Small" ? size.small : textEcoSize == "Normal" ? size.normal : textEcoSize == "Large" ? size.large : textEcoSize == "Huge" ? size.huge : na)
