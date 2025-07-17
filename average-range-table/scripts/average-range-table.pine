@@ -1,0 +1,108 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © AnhNguyenfx
+
+//@version=6
+indicator("Average Range Table", overlay = true)
+
+// === Input group: Forex Settings ===
+var forexGroup = "Forex Pips?"
+isForex = input.bool(title="Display in Forex Pips", defval=true, group=forexGroup)
+
+// === Input group: Table Display Settings ===
+var groupPosition = "Table Avg Range Settings"
+
+// Position of the table (top/middle/bottom and left/center/right)
+tableX = input.string("Right", title="Horizontal Position", options=["Left", "Center", "Right"], group=groupPosition)
+tableY = input.string("Top", title="Vertical Position", options=["Top", "Middle", "Bottom"], group=groupPosition)
+
+// Text size selection
+textSize = input.string("Normal", title="Text Size", options=["Tiny" ,"Small", "Normal", "Large", "Huge"], group=groupPosition)
+
+// Table color settings
+bgColorHeader = input.color(color.blue, title="Header Background Color", group=groupPosition)
+textColorHeader = input.color(color.white, title="Header Text Color", group=groupPosition)
+bgColorRow = input.color(color.black, title="Row Background Color", group=groupPosition)
+textColorRow = input.color(color.white, title="Row Text Color", group=groupPosition)
+
+// === Helper function to determine text size ===
+get_text_size(sizeStr) =>
+    sizeStr == "Tiny" ? size.tiny : sizeStr == "Small" ? size.small : sizeStr == "Large" ? size.large : sizeStr == "Huge" ? size.huge : size.normal
+
+ts = get_text_size(textSize)
+
+// === Range calculation functions ===
+dailyRange(n) => request.security(syminfo.tickerid, "D", high[n] - low[n], lookahead = barmerge.lookahead_off)
+weeklyRange(n) => request.security(syminfo.tickerid, "W", high[n] - low[n], lookahead = barmerge.lookahead_off)
+monthlyRange(n) => request.security(syminfo.tickerid, "M", high[n] - low[n], lookahead = barmerge.lookahead_off)
+quarterlyRange(n) => request.security(syminfo.tickerid, "3M", high[n] - low[n], lookahead = barmerge.lookahead_off)
+
+// === Calculate average ranges ===
+dailyBars = 5
+weeklyBars = 4
+monthlyBars = 3
+quarterlyBars = 4
+
+// Daily
+range1 = dailyRange(1), range2 = dailyRange(2), range3 = dailyRange(3), range4 = dailyRange(4), range5 = dailyRange(5)
+avgDailyRange = (range1 + range2 + range3 + range4 + range5) / dailyBars
+
+// Weekly
+weeklyRange1 = weeklyRange(1), weeklyRange2 = weeklyRange(2), weeklyRange3 = weeklyRange(3), weeklyRange4 = weeklyRange(4)
+avgWeeklyRange = (weeklyRange1 + weeklyRange2 + weeklyRange3 + weeklyRange4) / weeklyBars
+
+// Monthly
+monthlyRange1 = monthlyRange(1), monthlyRange2 = monthlyRange(2), monthlyRange3 = monthlyRange(3)
+avgMonthlyRange = (monthlyRange1 + monthlyRange2 + monthlyRange3) / monthlyBars
+
+// Quarterly
+quarterlyRange1 = quarterlyRange(1), quarterlyRange2 = quarterlyRange(2), quarterlyRange3 = quarterlyRange(3), quarterlyRange4 = quarterlyRange(4)
+avgQuarterlyRange = (quarterlyRange1 + quarterlyRange2 + quarterlyRange3 + quarterlyRange4) / quarterlyBars
+
+// === Convert value to pips or ticks ===
+to_pips(val) => isForex ? val / syminfo.mintick / 10 : val / syminfo.mintick
+
+dailyRangePips = to_pips(avgDailyRange)
+weeklyRangePips = to_pips(avgWeeklyRange)
+monthlyRangePips = to_pips(avgMonthlyRange)
+quarterlyRangePips = to_pips(avgQuarterlyRange)
+
+// === Determine table position based on user selection ===
+posString = str.lower(tableY) + "_" + str.lower(tableX)
+var tablePos = switch posString
+    "top_left"       => position.top_left
+    "top_center"     => position.top_center
+    "top_right"      => position.top_right
+    "middle_left"    => position.middle_left
+    "middle_center"  => position.middle_center
+    "middle_right"   => position.middle_right
+    "bottom_left"    => position.bottom_left
+    "bottom_center"  => position.bottom_center
+    "bottom_right"   => position.bottom_right
+
+// === Create table ===
+var table avgRangeTable = table.new(position=tablePos, columns=2, rows=5, border_width=1)
+
+// === Utility: Format string or fallback for na ===
+strVal(val) => na(val) ? "-" : str.tostring(val, "#.##")
+
+// === Update table content ===
+if barstate.islast
+    // Header
+    table.cell(avgRangeTable, 0, 0, "Range Type", bgcolor=bgColorHeader, text_color=textColorHeader, text_size=ts)
+    table.cell(avgRangeTable, 1, 0, "Average", bgcolor=bgColorHeader, text_color=textColorHeader, text_size=ts)
+
+    // Daily
+    table.cell(avgRangeTable, 0, 1, "Daily (" + str.tostring(dailyBars) + ")", bgcolor=bgColorRow, text_color=textColorRow, text_size=ts)
+    table.cell(avgRangeTable, 1, 1, strVal(dailyRangePips), bgcolor=bgColorRow, text_color=textColorRow, text_size=ts)
+
+    // Weekly
+    table.cell(avgRangeTable, 0, 2, "Weekly (" + str.tostring(weeklyBars) + ")", bgcolor=bgColorRow, text_color=textColorRow, text_size=ts)
+    table.cell(avgRangeTable, 1, 2, strVal(weeklyRangePips), bgcolor=bgColorRow, text_color=textColorRow, text_size=ts)
+
+    // Monthly
+    table.cell(avgRangeTable, 0, 3, "Monthly (" + str.tostring(monthlyBars) + ")", bgcolor=bgColorRow, text_color=textColorRow, text_size=ts)
+    table.cell(avgRangeTable, 1, 3, strVal(monthlyRangePips), bgcolor=bgColorRow, text_color=textColorRow, text_size=ts)
+
+    // Quarterly
+    table.cell(avgRangeTable, 0, 4, "Quarterly (" + str.tostring(quarterlyBars) + ")", bgcolor=bgColorRow, text_color=textColorRow, text_size=ts)
+    table.cell(avgRangeTable, 1, 4, strVal(quarterlyRangePips), bgcolor=bgColorRow, text_color=textColorRow, text_size=ts)
